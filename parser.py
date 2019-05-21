@@ -1,5 +1,8 @@
 from urllib.request import urlopen
 from htmldom import htmldom
+import re
+import sqlite3
+import io
 
 
 class Game:
@@ -12,10 +15,29 @@ class Game:
     time = ''
 
 
+class gameBase:
+    def __init__(self):
+        self.connection = sqlite3.connect("gameBase.db")
+        self.cursor = self.connection.cursor()
+        self.connection.commit()
+
+    def __del__(self):
+        self.connection.close()
+
+    def wykonaj(self, instrukcje):
+        self.cursor.executescript(instrukcje)
+        self.connection.commit()
+
+
+with io.open('baza_gier.sql', mode='r', encoding='utf-8') as sql:
+    base = gameBase()
+    base.wykonaj(sql.read())  # zakomentować żeby nie znikało
+
+
 def getUrlDom(url):
     request = urlopen(url) #tworzymy żądanie po zawartość podanego adresu
-    html = request.read().decode('windows-1250') #pobieramy treść odpowiedzi, a następnie dekodujemy ją z kodowania windows 1250, bo parser wernie pracuje w jakimś innym
-    return htmldom.HtmlDom().createDom(html) #na podstawie html tworzymy drzewo dokumentu (htmldom to bibliotekja do tworzenie drzewa dokumentu)
+    html = request.read().decode('windows-1250') #pobieramy treść odpowiedzi, a następnie dekodujemy ją z kodowania windows 1250, bo parser pewnie pracuje w jakimś innym
+    return htmldom.HtmlDom().createDom(html) #na podstawie html tworzymy drzewo dokumentu (htmldom to biblioteka do tworzenie drzewa dokumentu)
 
 
 #zwracamy tekst wewnątrz wązła do listy
@@ -55,10 +77,68 @@ def getValueForKey(values, keys, key):
         return ''
 
 
+def getMinMax(str):
+    match = re.search("od (\\d+) do (\\d+)", str)
+    if match != None:
+        return match.groups()
+    match = re.search("od (\\d+)", str)
+    if match != None:
+        return match.groups()[0], None
+    match = re.search("do \\d+", str)
+    if match != None:
+        return None, match.groups()[0]
+    match = re.search("\d+", str)
+    if match != None:
+        num = match.group()
+        return num, num
+    else:
+        return None, None
+
+
+def getId(name, id_field, field, table):
+    if name != None:
+        base.cursor.execute("SELECT " + id_field + " FROM " + table + " WHERE " + field + " = \"" + name + "\";")
+        row = base.cursor.fetchone()
+        if row:
+            return row[0]
+        else:
+            base.cursor.execute("INSERT INTO " + table + " VALUES (NULL, ?)", (name,))
+            return base.cursor.lastrowid
+
+
+def saveGame(game):
+    min_age = getMinMax(game.age)[0]
+    time = getMinMax(game.time)
+    min_time = time[0]
+    max_time = time[1]
+    gamers = getMinMax(game.gamers)
+    min_gamers = gamers[0]
+    max_gamers = gamers[1]
+
+    base.cursor.execute("INSERT INTO tytuly VALUES (NULL, ?, ?, ?, ?, ?, ?)",
+                        (game.name, min_age, min_gamers, max_gamers, min_time, max_time))
+    title_id = base.cursor.lastrowid
+    category_ids = list()
+    for category in game.categories:
+        category_ids.append(getId(category, "id_kategorii", "kategoria", "kategorie"))
+    mechanic_ids = list()
+    for mechanic in game.mechanics:
+        mechanic_ids.append(getId(mechanic, "id_mechaniki", "mechanika", "mechaniki"))
+    for category_id in category_ids:
+        base.cursor.execute("INSERT INTO tytuly_kategorie VALUES (?, ?)", (title_id, category_id))
+    for mechanic_id in mechanic_ids:
+        base.cursor.execute("INSERT INTO tytuly_mechaniki VALUES (?, ?)", (title_id, mechanic_id))
+    base.connection.commit()
+    print("Zapisuję grę: " + game.name)
+
+
+print("Odczytuję listę gier")
+
 url = 'http://gra24h.pl/'
 dom = getUrlDom(url)
 games = dom.find('div#nazwa a')
-data = list()
+
+print("Rozpoczynam pracę")
 
 for game in games.nodeList:
     g = Game()
@@ -72,6 +152,5 @@ for game in games.nodeList:
     g.age = getValueForKey(values, keys, 'Wiek')
     g.gamers = getValueForKey(values, keys, 'Liczba graczy')
     g.time = getValueForKey(values, keys, 'Czas gry')
-    data.append(g)
-
+    saveGame(g)
 

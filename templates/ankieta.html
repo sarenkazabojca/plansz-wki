@@ -1,0 +1,68 @@
+<html lang="pl">
+<head>
+    <meta charset="utf-8">
+    <style>
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        fieldset.flex {
+            flex: 1 1 auto;
+        }
+        .content {
+            max-height: 17em;
+            overflow-y: scroll;
+            padding: 1em;
+        }
+        input[type=submit] {
+            align-self: start;
+            margin-top: 1em;
+        }
+    </style>
+</head>
+<body>
+<form action="/wynik" method="post">
+    <fieldset class="flex">
+        <legend>Wybierz kategorię:</legend>
+        <div class="content">
+        {% for kategoria in kategorie %}
+            <div>
+                <input type="checkbox" id="kat_{{ kategoria.id }}" name="kategoria[]" value="{{ kategoria.id }}">
+                <label for="kat_{{ kategoria.id }}">{{ kategoria.nazwa }}</label>
+            </div>
+        {% endfor %}
+        </div>
+    </fieldset>
+    <fieldset  class="flex">
+        <legend>Wybierz mechanikę:</legend>
+        <div class="content">
+        {% for mechanika in mechaniki %}
+            <div>
+                <input type="checkbox" id="mech_{{ mechanika.id }}" name="mechanika[]" value="{{ mechanika.id }}">
+                <label for="mech_{{ mechanika.id }}">{{ mechanika.nazwa }}</label>
+            </div>
+        {% endfor %}
+        </div>
+    </fieldset>
+    <fieldset>
+        <legend>Określ wiek najmłodszego gracza:</legend>
+        <input type="number" name="wiek" min="0">
+    </fieldset>
+    <fieldset>
+        <legend>Określ liczbę graczy:</legend>
+        <span>od:</span>
+        <input type="number" name="gracze_od" min="0">
+        <span>do:</span>
+        <input type="number" name="gracze_do" min="0">
+    </fieldset>
+    <fieldset>
+        <legend>Określ czas gry:</legend>
+        <span>od:</span>
+        <input type="number" name="czas_od" min="0">
+        <span>do:</span>
+        <input type="number" name="czas_do" min="0">
+    </fieldset>
+    <input type="submit">
+</form>
+</body>
+</html>

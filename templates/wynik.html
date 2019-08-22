@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html lang="pl">
+<fieldset>
+    {% for gra in gry %}
+        <div>
+            <a href="{{ gra.link }}">{{ gra.nazwa }}</a>
+        </div>
+    {% endfor %}
+</fieldset>

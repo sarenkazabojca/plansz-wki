@@ -13,6 +13,7 @@ class Game:
     age = ''
     gamers = ''
     time = ''
+    link = ''
 
 
 class gameBase:
@@ -31,7 +32,7 @@ class gameBase:
 
 with io.open('baza_gier.sql', mode='r', encoding='utf-8') as sql:
     base = gameBase()
-    base.wykonaj(sql.read())  # zakomentować żeby nie znikało
+    base.wykonaj(sql.read())
 
 
 def getUrlDom(url):
@@ -115,8 +116,8 @@ def saveGame(game):
     min_gamers = gamers[0]
     max_gamers = gamers[1]
 
-    base.cursor.execute("INSERT INTO tytuly VALUES (NULL, ?, ?, ?, ?, ?, ?)",
-                        (game.name, min_age, min_gamers, max_gamers, min_time, max_time))
+    base.cursor.execute("INSERT INTO tytuly VALUES (NULL, ?, ?, ?, ?, ?, ?, ?)",
+                        (game.name, min_age, min_gamers, max_gamers, min_time, max_time, game.link))
     title_id = base.cursor.lastrowid
     category_ids = list()
     for category in game.categories:
@@ -141,16 +142,22 @@ games = dom.find('div#nazwa a')
 print("Rozpoczynam pracę")
 
 for game in games.nodeList:
-    g = Game()
-    dom = getUrlDom(url + game.attributes['href'][0])
-    g.name = dom.find('h2.panel-title').nodeList[0].children[0].text.strip()
-    keys = dom.find('div.panel-body dl.dl-horizontal dt')
-    values = dom.find('div.panel-body dl.dl-horizontal dd')
-    g.categories = getValuesForKey(values, keys, 'Kategorie')
-    g.rating = getValueForKey(values, keys, 'Pozycja na BGG')
-    g.mechanics = getValuesForKey(values, keys, 'Mechaniki')
-    g.age = getValueForKey(values, keys, 'Wiek')
-    g.gamers = getValueForKey(values, keys, 'Liczba graczy')
-    g.time = getValueForKey(values, keys, 'Czas gry')
-    saveGame(g)
+    try:
+        g = Game()
+        link = url + game.attributes['href'][0]
+        dom = getUrlDom(link)
+        g.name = dom.find('h2.panel-title').nodeList[0].children[0].text.strip()
+        keys = dom.find('div.panel-body dl.dl-horizontal dt')
+        values = dom.find('div.panel-body dl.dl-horizontal dd')
+        g.categories = getValuesForKey(values, keys, 'Kategorie')
+        g.rating = getValueForKey(values, keys, 'Pozycja na BGG')
+        g.mechanics = getValuesForKey(values, keys, 'Mechaniki')
+        g.age = getValueForKey(values, keys, 'Wiek')
+        g.gamers = getValueForKey(values, keys, 'Liczba graczy')
+        g.time = getValueForKey(values, keys, 'Czas gry')
+        g.link = link
+        saveGame(g)
+    except:
+        print("Błędny format danych")
+        continue
 

@@ -30,6 +30,7 @@ class gameBase:
         self.connection.commit()
 
 
+#wczytujemy plik baza_gier.sql i wykonujemy zawartość
 with io.open('baza_gier.sql', mode='r', encoding='utf-8') as sql:
     base = gameBase()
     base.wykonaj(sql.read())
@@ -37,7 +38,7 @@ with io.open('baza_gier.sql', mode='r', encoding='utf-8') as sql:
 
 def getUrlDom(url):
     request = urlopen(url) #tworzymy żądanie po zawartość podanego adresu
-    html = request.read().decode('windows-1250') #pobieramy treść odpowiedzi, a następnie dekodujemy ją z kodowania windows 1250, bo parser pewnie pracuje w jakimś innym
+    html = request.read().decode('windows-1250') #pobieramy treść odpowiedzi, a następnie dekodujemy ją z kodowania windows 1250
     return htmldom.HtmlDom().createDom(html) #na podstawie html tworzymy drzewo dokumentu (htmldom to biblioteka do tworzenie drzewa dokumentu)
 
 
@@ -77,7 +78,7 @@ def getValueForKey(values, keys, key):
     else:
         return ''
 
-
+#pobranie samych wartości numerycznych, bez tekstu, za pomocą wyrażeń regularnych  (https://regex101.com)
 def getMinMax(str):
     match = re.search("od (\\d+) do (\\d+)", str)
     if match != None:
@@ -96,6 +97,7 @@ def getMinMax(str):
         return None, None
 
 
+#pobieranie id obiektu na podstawie jego nazwy z określonej tabeli
 def getId(name, id_field, field, table):
     if name != None:
         base.cursor.execute("SELECT " + id_field + " FROM " + table + " WHERE " + field + " = \"" + name + "\";")
@@ -107,6 +109,7 @@ def getId(name, id_field, field, table):
             return base.cursor.lastrowid
 
 
+#zapisywanie gry do bazy danych
 def saveGame(game):
     min_age = getMinMax(game.age)[0]
     time = getMinMax(game.time)
@@ -115,9 +118,8 @@ def saveGame(game):
     gamers = getMinMax(game.gamers)
     min_gamers = gamers[0]
     max_gamers = gamers[1]
-
-    base.cursor.execute("INSERT INTO tytuly VALUES (NULL, ?, ?, ?, ?, ?, ?, ?)",
-                        (game.name, min_age, min_gamers, max_gamers, min_time, max_time, game.link))
+    base.cursor.execute("INSERT INTO tytuly VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        (game.name, min_age, min_gamers, max_gamers, min_time, max_time, game.link, game.rating))
     title_id = base.cursor.lastrowid
     category_ids = list()
     for category in game.categories:
@@ -137,18 +139,21 @@ print("Odczytuję listę gier")
 
 url = 'http://gra24h.pl/'
 dom = getUrlDom(url)
-games = dom.find('div#nazwa a')
+games = dom.find('div#nazwa a') #pobieramy węzły z linkami do gier
 
 print("Rozpoczynam pracę")
 
+#dla wszystkich węzłów z linkami do gier próbujemy wykonać akcję odczytania z drzewa DOM i zapisu do bazy
 for game in games.nodeList:
     try:
         g = Game()
-        link = url + game.attributes['href'][0]
-        dom = getUrlDom(link)
-        g.name = dom.find('h2.panel-title').nodeList[0].children[0].text.strip()
+        link = url + game.attributes['href'][0] #odczytujemy adres gry
+        dom = getUrlDom(link) #tworzymy drzewo dom dla strony gry
+        g.name = dom.find('h2.panel-title').nodeList[0].children[0].text.strip() #odczytujemy nazwę gry
+        #pobieramy wartości opisujące grę z tabelki
         keys = dom.find('div.panel-body dl.dl-horizontal dt')
         values = dom.find('div.panel-body dl.dl-horizontal dd')
+        #zapisujemy wartości do gry na podstawie ich nazw
         g.categories = getValuesForKey(values, keys, 'Kategorie')
         g.rating = getValueForKey(values, keys, 'Pozycja na BGG')
         g.mechanics = getValuesForKey(values, keys, 'Mechaniki')
@@ -156,7 +161,7 @@ for game in games.nodeList:
         g.gamers = getValueForKey(values, keys, 'Liczba graczy')
         g.time = getValueForKey(values, keys, 'Czas gry')
         g.link = link
-        saveGame(g)
+        saveGame(g) #zapisujemy grę w bazie danych
     except:
         print("Błędny format danych")
         continue

@@ -3,7 +3,7 @@
 <fieldset>
     {% for gra in gry %}
         <div>
-            <a href="{{ gra.link }}">{{ gra.nazwa }}</a>
+            <span title="Pozycja w rankingu BGG">{{ gra. rating }}</span> <a href="{{ gra.link }}">{{ gra.nazwa }} </a>
         </div>
     {% endfor %}
 </fieldset>

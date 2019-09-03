@@ -12,7 +12,8 @@ create table tytuly(
 	max_liczba_graczy INTEGER,
 	min_czas INTEGER,
 	max_czas INTEGER,
-	link TEXT NOT NULL
+	link TEXT NOT NULL,
+	rating INTEGER
     );
 
 create table kategorie(

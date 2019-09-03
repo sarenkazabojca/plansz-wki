@@ -1,5 +1,4 @@
 import sqlite3
-import io
 from flask import Flask, render_template, request
 
 
@@ -11,10 +10,6 @@ class Baza:
 
     def __del__(self):
         self.connection.close()
-
-    def wykonaj(self, instrukcje):
-        self.cursor.executescript(instrukcje)
-        self.connection.commit()
 
     def pobierzMechaniki(self):
         self.cursor.execute("select * from mechaniki;")
@@ -35,6 +30,7 @@ class Baza:
         return list(map(lambda wiersz: dict({
             "nazwa":            wiersz[0],
             "link":             wiersz[1],
+            "rating":           wiersz[2]
         }), self.cursor.fetchall()))
 
 
@@ -58,26 +54,25 @@ def zapytanie1():
     gracze_do = data.get("gracze_do")
     czas_od = data.get("czas_od")
     czas_do = data.get("czas_do")
-    conditions = list()
-    query = "SELECT DISTINCT tytul, link from tytuly AS t, tytuly_kategorie AS k, tytuly_mechaniki as m WHERE t.id_tytulu = k.id_tytulu AND t.id_tytulu = m.id_tytulu AND "
+    warunki = list()
+    zapytanie = "SELECT DISTINCT tytul, link, rating from tytuly AS t, tytuly_kategorie AS k, tytuly_mechaniki as m WHERE t.id_tytulu = k.id_tytulu AND t.id_tytulu = m.id_tytulu AND "
     if len(kategorie) > 0:
-        conditions.append("k.id_kategorii IN (" + ",".join(kategorie) + ")")
+        warunki.append("k.id_kategorii IN (" + ",".join(kategorie) + ")")
     if len(mechaniki) > 0:
-        conditions.append("m.id_mechaniki IN (" + ",".join(mechaniki) + ")")
+        warunki.append("m.id_mechaniki IN (" + ",".join(mechaniki) + ")")
     if wiek != "":
-        conditions.append(wiek + " >= t.min_wiek")
+        warunki.append(wiek + " >= t.min_wiek")
     if gracze_od != "":
-        conditions.append("t.min_liczba_graczy <= " + gracze_od + " AND t.max_liczba_graczy >= " + gracze_od)
+        warunki.append("t.min_liczba_graczy <= " + gracze_od + " AND t.max_liczba_graczy >= " + gracze_od)
     if gracze_do != "":
-        conditions.append("t.min_liczba_graczy <= " + gracze_do + " AND t.max_liczba_graczy >= " + gracze_do)
+        warunki.append("t.min_liczba_graczy <= " + gracze_do + " AND t.max_liczba_graczy >= " + gracze_do)
     if czas_od != "":
-        conditions.append("t.min_czas >= " + czas_od)
+        warunki.append("t.min_czas >= " + czas_od)
     if czas_do != "":
-        conditions.append("t.max_czas <= " + czas_do)
-    query += " AND ".join(conditions)
-    print(query)
-    print(baza.pobierzGry(query))
-    return render_template("wynik.html", gry=baza.pobierzGry(query))
+        warunki.append("t.max_czas <= " + czas_do)
+    zapytanie += " AND ".join(warunki)
+    zapytanie += " ORDER BY t.rating"
+    return render_template("wynik.html", gry=baza.pobierzGry(zapytanie))
 
 
 if __name__ == "__main__":
